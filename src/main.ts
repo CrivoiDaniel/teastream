@@ -2,15 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { CoreModule } from './core/core.module';
 import { ConfigService } from '@nestjs/config';
 
-import * as cookieParser from 'cookie-parser';
-import * as session from 'express-session'
+import cookieParser from 'cookie-parser'
+
+import session from 'express-session'
 import { RedisStore } from 'connect-redis';
 
 import { ValidationPipe } from '@nestjs/common';
 import { ms, type StringValue } from './shared/utils/ms.util';
 import { parseBoolean } from './shared/utils/parse-boolean.util';
 import { RedisService } from './core/redis/redis.service';
-import Redis from 'ioredis';
 
 async function bootstrap() {
   const app = await NestFactory.create(CoreModule);
@@ -34,7 +34,7 @@ async function bootstrap() {
       domain: config.getOrThrow<string>('SESSION_DOMAIN'),
       maxAge: ms(config.getOrThrow<StringValue>('SESSION_MAX_AGE')),
       httpOnly: parseBoolean(config.getOrThrow<string>('SESSION_HTTP_ONLY')),
-      secure: parseBoolean(config.getOrThrow<string>('SESSION_SESSION_SECURE')),
+      secure: parseBoolean(config.getOrThrow<string>('SESSION_SECURE')),
       sameSite: 'lax'
     },
     store: new RedisStore ({
