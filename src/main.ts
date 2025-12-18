@@ -3,15 +3,16 @@ import { CoreModule } from './core/core.module';
 import { ConfigService } from '@nestjs/config';
 
 import cookieParser from 'cookie-parser'
-
 import session from 'express-session'
-import { RedisStore } from 'connect-redis';
+import connectRedis from 'connect-redis';
+
 
 import { ValidationPipe } from '@nestjs/common';
 import { ms, type StringValue } from './shared/utils/ms.util';
 import { parseBoolean } from './shared/utils/parse-boolean.util';
 import { RedisService } from './core/redis/redis.service';
 
+const RedisStore = connectRedis(session);
 async function bootstrap() {
   const app = await NestFactory.create(CoreModule);
   
@@ -54,3 +55,4 @@ async function bootstrap() {
 
 }
 bootstrap();
+

@@ -27,7 +27,7 @@ export class AccountService {
         }
         const isEmailExists = await this.prismaService.user.findUnique({
             where: {
-                username
+                email
             }
         })
         if(isEmailExists) {
