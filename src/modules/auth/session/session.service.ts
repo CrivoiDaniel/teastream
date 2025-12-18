@@ -5,12 +5,13 @@ import { verify } from 'argon2';
 import  type { Request } from 'express';
 import { resolve } from 'path';
 import { ConfigService } from '@nestjs/config';
+import { getSessionMetadata } from '@/src/shared/utils/session-metadata.util';
 
 @Injectable()
 export class SessionService {
     public constructor(private readonly prismaService: PrismaService, private readonly configService: ConfigService){}
 
-    public async login(req: Request, input: LoginInput) {
+    public async login(req: Request, input: LoginInput, userAgent: string) {
         const {login, password} = input
 
         const user = await this.prismaService.user.findFirst({
@@ -29,9 +30,13 @@ export class SessionService {
         if(!isValidPassword){
             throw new UnauthorizedException('Wrong password')
         }
+
+        const metadata = getSessionMetadata(req, userAgent)
+
         return new Promise((resolve, reject) => {
             req.session.createdAt = new Date()
             req.session.userId = user.id
+            req.session.metadata = metadata
 
             req.session.save(err => {
                 if(err) {
