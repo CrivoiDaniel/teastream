@@ -6,7 +6,7 @@ export  async function generateToken(
             prismaService: PrismaService,
             user: User, 
             type: TokenType,
-            isUUID: boolean = false  // pentru dezactivarea contului vom cere s[ introduca acest cod
+            isUUID: boolean = true  // pentru dezactivarea contului vom cere s[ introduca acest cod
             
 ) {
     let token: string
