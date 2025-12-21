@@ -33,8 +33,9 @@ export function DeactivateTemplate({token, metadata}:
                         <Heading className='text-3xl text-black font-semibold'>
                             {token}
                         </Heading>
-                        <Text className='text-black'></Text>
+                        <Text className='text-black'>
                             This code is available 5 minutes
+                        </Text>
                     </Section>
 
                     <Section className='bg-gray-100 rounded-lg p-6 mb-6'>
