@@ -1,0 +1,23 @@
+import getRawBody from 'raw-body';
+
+import { BadRequestException, Injectable, type NestMiddleware } from "@nestjs/common";
+import  type { NextFunction, Request, Response } from "express";
+
+@Injectable()
+export class RawBodyMiddleware implements NestMiddleware{
+    public use(req: Request, res: Response, next: NextFunction) {
+
+        if(!req.readable) {
+            return next(new BadRequestException('Invalid data from request'))
+        }
+        getRawBody(req, {encoding: 'utf-8'}).then(rawBody => {
+            req.body = rawBody
+            next()
+        }).catch(error => {
+            throw new BadRequestException('Error while receiving:',error)
+            next(error)
+        }
+            
+        )
+    }
+}

@@ -2,17 +2,17 @@ import { Field, InputType } from "@nestjs/graphql";
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 @InputType()
-export class ChangeStreamInfoInput{
+export class GenerateStreamTokenInput{
 
     @Field(() => String)
     @IsString()
     @IsNotEmpty()
-    public title: string
+    public userId: string
 
     @Field(() => String)
     @IsString()
     @IsNotEmpty()
-    public categoryId: string
+    public channelId: string
 
 
 }

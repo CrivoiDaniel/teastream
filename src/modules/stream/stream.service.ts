@@ -1,5 +1,5 @@
 import { PrismaService } from '@/src/core/prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FiltersInput } from './inputs/filters.input';
 import type { Prisma, User } from '@/prisma/generated';
 import { ChangeStreamInfoInput } from './inputs/change-stream-info.input';
@@ -7,11 +7,16 @@ import { ChangeStreamInfoInput } from './inputs/change-stream-info.input';
 import { FileUpload } from 'graphql-upload';
 import sharp from 'sharp'
 import { StorageService } from '../libs/storage/storage.service';
+import { GenerateStreamTokenInput } from './inputs/generate-stream-token.input';
+import { ConfigService } from '@nestjs/config';
+import { AccessToken } from 'livekit-server-sdk';
 
 @Injectable()
 export class StreamService {
 
-    public constructor(private readonly prismaService: PrismaService,
+    public constructor(
+        private readonly prismaService: PrismaService,
+        private readonly configService: ConfigService,
         private readonly storageService: StorageService
     ) { }
 
@@ -106,16 +111,16 @@ export class StreamService {
 
         if (file.fileName && file.fileName.endsWith('.gif')) {
             const processedBuffer = await sharp(buffer, { animated: true })
-            .resize(1280, 720)
-            .webp().
-            toBuffer()
+                .resize(1280, 720)
+                .webp().
+                toBuffer()
 
             await this.storageService.upload(processedBuffer, fileName, 'image/webp')
         } else {
             const processedBuffer = await sharp(buffer)
-            .resize(1280, 720)
-            .webp().
-            toBuffer()
+                .resize(1280, 720)
+                .webp().
+                toBuffer()
 
             await this.storageService.upload(processedBuffer, fileName, 'image/webp')
         }
@@ -151,7 +156,55 @@ export class StreamService {
         return true
     }
 
-    private async findByUserId(user: User){
+    public async generateToken(input: GenerateStreamTokenInput) {
+        const { userId, channelId } = input
+
+        let self: { id: string, username: string }
+
+        const user = await this.prismaService.user.findUnique({
+            where: {
+                id: userId
+            }
+        })
+        if (user) {
+            self = { id: user.id, username: user.username }
+        } else {
+            self = {
+                id: userId,
+                username: `Viewer ${Math.floor(Math.random() * 100000)}`
+            }
+        }
+        const channel = await this.prismaService.user.findUnique({
+            where: {
+                id: channelId
+            }
+        })
+
+        if (!channel) {
+            throw new NotFoundException('Chanel is not found')
+        }
+
+        const isHost = self.id === channel.id
+
+        const token = new AccessToken(
+            this.configService.getOrThrow<string>('LIVEKIT_API_KEY'),
+            this.configService.getOrThrow<string>('LIVEKIT_API_SECRET'),
+            {
+                identity: isHost ? `Host-${self.id}` : self.id.toString(),
+                name: self.username
+            }
+        )
+
+        token.addGrant({
+            room: channel.id,
+            roomJoin: true,
+            canPublish: false
+        })
+
+        return {token: token.toJwt()}
+    }
+
+    private async findByUserId(user: User) {
         const stream = await this.prismaService.stream.findUnique({
             where: {
                 userId: user.id
