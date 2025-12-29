@@ -29,6 +29,7 @@ model User {
   tokens      Token[]
   socialLinks SocialLink[]
   stream      Stream?
+  chatMessages ChatMessage[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -64,6 +65,11 @@ model Stream {
 
   isLive Boolean @default(false) @map("is_live")
 
+  isChatEnabled Boolean @default(true) @map("is_chat_enabled")
+  isChatFollowersOnly Boolean @default(false) @map("is_chat_followers_only")
+  isChatPremiumFollowersOnly Boolean @default(false) @map("is_chat_premium_followers_only")
+  chatMessages ChatMessage[]
+
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String?  @unique @map("user_id")
 
@@ -75,6 +81,25 @@ model Stream {
 
   @@map("streams")
 }
+model ChatMessage {
+  id String @id @default(uuid())
+
+  text String 
+
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  stream Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  streamId String @map("stream_id")
+
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("chat_messages")
+
+}
 
 model Category {
   id String @id @default(uuid())
@@ -85,7 +110,6 @@ model Category {
   thumbnailUrl  String    @map("thumbnail_url")
 
   streams Stream[]
-
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
