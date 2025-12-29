@@ -36,7 +36,8 @@ export class StreamService {
                 ...whereClause
             },
             include: {
-                user: true
+                user: true,
+                category: true
             },
             orderBy: {
                 createdAt: 'desc'
@@ -57,7 +58,7 @@ export class StreamService {
 
         const randomIndexes = new Set<number>()
 
-        while (randomIndexes.size < 4) {
+        while (randomIndexes.size < 7) {
             const randomIndex = Math.floor(Math.random() * total)
             randomIndexes.add(randomIndex)
         }
@@ -68,7 +69,8 @@ export class StreamService {
                 }
             },
             include: {
-                user: true
+                user: true,
+                category: true
             },
             take: total,
             skip: 0
@@ -85,7 +87,12 @@ export class StreamService {
                 userId: user.id
             },
             data: {
-                title
+                title,
+                category: {
+                    connect: {
+                        id: categoryId
+                    }
+                }
             }
         })
         return true
