@@ -1,12 +1,14 @@
 import { PrismaService } from '@/src/core/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { LivekitService } from '../libs/livekit/livekit.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class WebhookService {
     public constructor(
         private readonly prismaService: PrismaService,
-        private livekitService: LivekitService) {}
+        private readonly livekitService: LivekitService,
+        private readonly notificationsService: NotificationService ) {}
     
     public async receiveWebhookLivekit(body: string, authorization: string) {
 
@@ -18,24 +20,53 @@ export class WebhookService {
 
         if(event.event === 'ingress_started'){
             console.log('STREAM STARTED:', event.ingressInfo.url)
-            await this.prismaService.stream.update({
+           const stream= await this.prismaService.stream.update({
                 where: {
                     ingressId: event.ingressInfo.ingressId
                 },
                 data: {
                     isLive: true
+                },
+                include: { 
+                    user: true
                 }
             })
+            const followers = await this.prismaService.follow.findMany({
+                where: {
+                    followingId: stream.user.id,
+                    follower: {
+                        isDeactivated: false
+                    }
+                },
+                include: {
+                    follower: {
+                        include: {
+                            notificationSettings: true
+                        }
+                    }
+                }
+            })
+            for(const follow of followers) {
+                const follower = follow.follower
+                if(follower.notificationSettings.siteNotifications) {
+                    await this.notificationsService.createStreamStart(follower.id, stream.user)
+                }
+            }
 
         }
         if(event.event === 'ingress_ended') {
-            await this.prismaService.stream.update({
+           const stream =  await this.prismaService.stream.update({
                 where: {
                     ingressId: event.ingressInfo.ingressId
                 },
                 data: {
                     isLive: false
                 }
+            })
+            await this.prismaService.chatMessage.deleteMany({
+                where: {
+                    streamId: stream.id
+            }
             })
         }
 
