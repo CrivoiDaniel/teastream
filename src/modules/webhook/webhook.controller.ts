@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Header, Headers, HttpCode, HttpStatus, Post, RawBody, UnauthorizedException } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
 
 @Controller('webhook')
 export class WebhookController {
-  public constructor(private readonly webhookService: WebhookService) {}
+  public constructor(private readonly webhookService: WebhookService) { }
 
   @Post('livekit')
   @HttpCode(HttpStatus.OK)
@@ -11,9 +11,24 @@ export class WebhookController {
     @Body() body: string,
     @Headers('Authorization') authorization: string
   ) {
-    if(!authorization) {
+    if (!authorization) {
       throw new UnauthorizedException('Authorization header is missing')
     }
     return this.webhookService.receiveWebhookLivekit(body, authorization)
   }
+
+  @Post('stripe')
+  @HttpCode(HttpStatus.OK)
+  public async receiveWebhookStripe(
+    @RawBody() rawBody: string,
+    @Headers('stripe-signature') sig: string) {
+      if(!sig){
+        throw new UnauthorizedException(
+          'Missing Stripe signature in header'
+        )
+      }
+      const event = await this.webhookService.constructStripeEvent(rawBody, sig)
+
+      await this.webhookService.receiveWebhookStripe(event)
+    }
 }

@@ -27,6 +27,11 @@ import { FollowModule } from '../modules/follow/follow.module';
 import { ChannelModule } from '../module/channel/channel.module';
 import { NotificationModule } from '../modules/notification/notification.module';
 import { TelegramModule } from '../modules/libs/telegram/telegram.module';
+import { StripeModule } from '../modules/libs/stripe/stripe.module';
+import { getStripeConfig } from '../config/stripe.config';
+import { PlanModule } from '../modules/sponsorship/plan/plan.module';
+import { TransactionModule } from '../modules/sponsorship/transaction/transaction.module';
+import { SubscriptionModule } from '../modules/sponsorship/subscription/subscription.module';
 
 @Module({
   imports: [
@@ -46,12 +51,18 @@ import { TelegramModule } from '../modules/libs/telegram/telegram.module';
       inject: [ConfigService]
 
     }),
+    StripeModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: getStripeConfig,
+      inject: [ConfigService]
+    }),
     PrismaModule,
     RedisModule,
     MailModule,
     StorageModule,
     LivekitModule,
     TelegramModule,
+    StripeModule,
     CronModule,
     AccountModule,
     SessionModule,
@@ -67,7 +78,10 @@ import { TelegramModule } from '../modules/libs/telegram/telegram.module';
     ChatModule,
     FollowModule,
     ChannelModule,
-    NotificationModule
+    NotificationModule,
+    PlanModule,
+    TransactionModule,
+    SubscriptionModule
   ]
 })
 export class CoreModule {}

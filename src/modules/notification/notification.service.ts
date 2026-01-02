@@ -1,4 +1,4 @@
-import { NotificationType, TokenType, type User } from '@/prisma/generated';
+import { NotificationType, type SponsorshipPlan, TokenType, type User } from '@/prisma/generated';
 import { PrismaService } from '@/src/core/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { ChangesNotificationsSettingsInput } from './inputs/change-notifications-settings.input';
@@ -39,6 +39,28 @@ export class NotificationService {
         return notifications
     }
 
+    public async createNewSponsorship(
+        userId: string,
+        plan: SponsorshipPlan,
+        sponsor: User) {
+        const notification = await this.prismaService.notification.create({
+            data: {
+                message: `<b className='font-medium'>You have a new sponsor!</b>
+                <p>User <a href='/${sponsor.username}'
+                className='font-semibold'>${sponsor.displayName}</a> became your
+                sponsor by choosing the plan <strong>${plan.title}</strong>.</p>`,
+                type: NotificationType.NEW_SPONSORSHIP,
+                user: {
+                    connect: {
+                        id: userId
+                    }
+                }
+            }
+        })
+        return notification
+    }
+
+
     public async createStreamStart(userId: string, channel: User) {
         const notification = await this.prismaService.notification.create({
             data: {
@@ -72,6 +94,33 @@ export class NotificationService {
         })
         return notification
     }
+
+    public async createEnableTwoFactor(userId: string) {
+        const notification = await this.prismaService.notification.create({
+            data: {
+                message: `<b className='font-medium'>Ensure your safety!</b>
+            <p>Enable two-factor authentication in your account settings to increase your protection level.</p>`,
+                type: NotificationType.ENABLE_TWO_FACTOR,
+                userId
+            }
+        })
+
+        return notification
+    }
+
+    public async createVerifyChannel(userId: string) {
+        const notification = await this.prismaService.notification.create({
+            data: {
+                message: `<b className='font-medium'>Congratulations!</b>
+            <p>Your channel has been verified, and now a checkmark will appear next to your channel.</p>`,
+                type: NotificationType.VERIFIED_CHANNEL,
+                userId
+            }
+        })
+
+        return notification
+    }
+
 
     public async changeSettings
         (user: User,

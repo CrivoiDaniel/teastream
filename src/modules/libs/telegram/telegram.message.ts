@@ -1,5 +1,5 @@
-import type { User } from "@/prisma/generated";
-import { SessionMetadata } from "@/src/shared/types/session-metadata.types";
+import type { SponsorshipPlan, User } from "@/prisma/generated";
+import type { SessionMetadata } from "@/src/shared/types/session-metadata.types";
 
 export const MESSAGES = {
   welcome:
@@ -70,5 +70,21 @@ export const MESSAGES = {
 
   newFollowing: (follower: User, followersCount: number) =>
     `<b>You have a new follower!</b>\n\nThis is user <a href="https://teastream.ru/${follower.username}">
-  ${follower.displayName}</a>\n\nTotal number of followers on your channel: ${followersCount}`
+  ${follower.displayName}</a>\n\nTotal number of followers on your channel: ${followersCount}`,
+
+  newSponsorship: (plan: SponsorshipPlan, sponsor: User) =>
+    `<b>🎉 New sponsor!</b>\n\n` +
+    `You have received a new sponsorship for the plan <b>${plan.title}</b>.\n` +
+    `💰 Amount: <b>${plan.price} ₽</b>\n` +
+    `👤 Sponsor: <a href="https://teastream.ru/${sponsor.username}">${sponsor.displayName}</a>\n` +
+    `🗓 Date: <b>${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</b>\n\n` +
+    `Thank you for your work and support on the TeaStream platform!`,
+  enableTwoFactor:
+    `🔐 Ensure your security!\n\n` +
+    `Enable two-factor authentication in <a href="https://teastream.ru/dashboard/settings">account settings</a>.`,
+  verifyChannel:
+    `<b>🎉 Congratulations! Your channel is verified</b>\n\n` +
+    `We are pleased to inform you that your channel is now verified, and you have received an official badge.\n\n` +
+    `The verification badge confirms the authenticity of your channel and improves viewer trust.\n\n` +
+    `Thank you for being with us and continuing to grow your channel with TeaStream!`
 }

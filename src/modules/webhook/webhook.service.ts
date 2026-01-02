@@ -3,34 +3,42 @@ import { Injectable } from '@nestjs/common';
 import { LivekitService } from '../libs/livekit/livekit.service';
 import { NotificationService } from '../notification/notification.service';
 import { TelegramService } from '../libs/telegram/telegram.service';
+import Stripe from 'stripe';
+import { useReducer } from 'react';
+import { TransactionStatus } from '@/prisma/generated';
+import { ConfigService } from '@nestjs/config';
+import { StripeService } from '../libs/stripe/stripe.service';
 
 @Injectable()
 export class WebhookService {
     public constructor(
         private readonly prismaService: PrismaService,
+        private readonly configService: ConfigService,
         private readonly livekitService: LivekitService,
+        private readonly stripeService: StripeService,
         private readonly notificationsService: NotificationService,
-        private readonly telegramService: TelegramService 
-    ) {}
-    
+        private readonly telegramService: TelegramService
+
+    ) { }
+
     public async receiveWebhookLivekit(body: string, authorization: string) {
 
         const event = await this.livekitService.receiver.receive(
-            body, 
-            authorization, 
+            body,
+            authorization,
             true // sunt unele probleme de siguranta cu true , daca la voi merge f[r[ true atunc isal scoateti]]
-        ) 
+        )
 
-        if(event.event === 'ingress_started'){
+        if (event.event === 'ingress_started') {
             console.log('STREAM STARTED:', event.ingressInfo.url)
-           const stream= await this.prismaService.stream.update({
+            const stream = await this.prismaService.stream.update({
                 where: {
                     ingressId: event.ingressInfo.ingressId
                 },
                 data: {
                     isLive: true
                 },
-                include: { 
+                include: {
                     user: true
                 }
             })
@@ -49,24 +57,24 @@ export class WebhookService {
                     }
                 }
             })
-            for(const follow of followers) {
+            for (const follow of followers) {
                 const follower = follow.follower
-                if(follower.notificationSettings.siteNotifications) {
+                if (follower.notificationSettings.siteNotifications) {
                     await this.notificationsService.createStreamStart(
-                        follower.id, 
+                        follower.id,
                         stream.user)
                 }
 
-                if(follower.notificationSettings.telegramNotifications && follower.telegramId) {
+                if (follower.notificationSettings.telegramNotifications && follower.telegramId) {
                     await this.telegramService.sendStreamStart(
-                        follower.telegramId, 
+                        follower.telegramId,
                         stream.user)
                 }
             }
 
         }
-        if(event.event === 'ingress_ended') {
-           const stream =  await this.prismaService.stream.update({
+        if (event.event === 'ingress_ended') {
+            const stream = await this.prismaService.stream.update({
                 where: {
                     ingressId: event.ingressInfo.ingressId
                 },
@@ -77,9 +85,97 @@ export class WebhookService {
             await this.prismaService.chatMessage.deleteMany({
                 where: {
                     streamId: stream.id
-            }
+                }
             })
         }
 
     }
+
+    public async receiveWebhookStripe(event: Stripe.Event) {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        if (event.type === 'checkout.session.completed') {
+            const planId = session.metadata.planId
+            const userId = session.metadata.userId
+            const channelId = session.metadata.channelId
+
+            const expiresAt = new Date()
+            expiresAt.setDate(expiresAt.getDay() + 30)
+
+            const sponsorshipSubscription = await this.prismaService.sponsorshipSubscription.create({
+                data: {
+                    expiresAt,
+                    planId,
+                    userId,
+                    channelId
+                },
+                include: {
+                    plan: true,
+                    user: true,
+                    channel: {
+                        include: {
+                            notificationSettings: true
+                        }
+                    }
+                }
+            })
+
+            await this.prismaService.transaction.updateMany({
+                where: {
+                    stripeSubscriptionId: session.id,
+                    status: TransactionStatus.PENDING
+                },
+                data: {
+                    status: TransactionStatus.SUCCESS
+                }
+            })
+
+            if (sponsorshipSubscription.channel.notificationSettings.siteNotifications) {
+                await this.notificationsService.createNewSponsorship(
+                    sponsorshipSubscription.channel.id,
+                    sponsorshipSubscription.plan,
+                    sponsorshipSubscription.user
+                )
+            }
+
+            if (sponsorshipSubscription.channel.notificationSettings.telegramNotifications &&
+                sponsorshipSubscription.channel.telegramId) {
+
+                await this.telegramService.sendNewSponsorship(
+                    sponsorshipSubscription.channel.telegramId,
+                    sponsorshipSubscription.plan,
+                    sponsorshipSubscription.user
+                )
+            }
+        }
+        if (event.type === 'checkout.session.expired') {
+            await this.prismaService.transaction.updateMany({
+                where: {
+                    stripeSubscriptionId: session.id,
+                },
+                data: {
+                    status: TransactionStatus.EXPIRED
+                }
+            })
+        }
+        if (event.type === 'checkout.session.async_payment_failed') {
+            await this.prismaService.transaction.updateMany({
+                where: {
+                    stripeSubscriptionId: session.id,
+                },
+                data: {
+                    status: TransactionStatus.FAILED
+                }
+            })
+        }
+    }
+
+    public constructStripeEvent(payload: any, signature: any) {
+        return this.stripeService.webhooks.constructEvent(
+            payload,
+            signature,
+            this.configService.getOrThrow<string>('STRIPE_WEBHOOK_SECRET')
+        )
+    }
+
 }

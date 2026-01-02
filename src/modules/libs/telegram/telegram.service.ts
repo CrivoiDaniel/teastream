@@ -1,4 +1,4 @@
-import { TokenType, User } from '@/prisma/generated';
+import { type SponsorshipPlan, TokenType, type User } from '@/prisma/generated';
 import { PrismaService } from '@/src/core/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,7 +7,7 @@ import { Context, Telegraf } from 'telegraf';
 import { MESSAGES } from './telegram.message';
 import { BUTTONS } from './telegram.buttons';
 import { AccessToken } from 'livekit-server-sdk';
-import  type { SessionMetadata } from '@/src/shared/types/session-metadata.types';
+import type { SessionMetadata } from '@/src/shared/types/session-metadata.types';
 import { channel } from 'diagnostics_channel';
 
 @Update()
@@ -118,21 +118,21 @@ export class TelegramService extends Telegraf {
     }
 
     public async sendPasswordResetToken(
-        chatId: string, 
-        token: string, 
+        chatId: string,
+        token: string,
         metadata: SessionMetadata) {
 
-        await this.telegram.sendMessage(chatId, MESSAGES.resetPassword(token, metadata), {parse_mode: 'HTML'})
+        await this.telegram.sendMessage(chatId, MESSAGES.resetPassword(token, metadata), { parse_mode: 'HTML' })
 
 
     }
 
     public async sendDeactivateToken(
-        chatId: string, 
-        token: string, 
+        chatId: string,
+        token: string,
         metadata: SessionMetadata) {
 
-        await this.telegram.sendMessage(chatId, MESSAGES.deactivate(token, metadata), {parse_mode: 'HTML'})
+        await this.telegram.sendMessage(chatId, MESSAGES.deactivate(token, metadata), { parse_mode: 'HTML' })
     }
 
     public async sendAccountDeletion(chatId: string) {
@@ -142,7 +142,7 @@ export class TelegramService extends Telegraf {
     }
 
     public async sendStreamStart(chatId: string, channel: User) {
-        await this.telegram.sendMessage(chatId, MESSAGES.streamStart(channel),{
+        await this.telegram.sendMessage(chatId, MESSAGES.streamStart(channel), {
             parse_mode: 'HTML'
         })
     }
@@ -150,10 +150,30 @@ export class TelegramService extends Telegraf {
 
         const user = await this.findUserByChatId(chatId)
         await this.telegram.sendMessage(chatId, MESSAGES.newFollowing(follower, user.followers.length),
-        {
+            {
+                parse_mode: 'HTML'
+            }
+        )
+    }
+
+    public async sendNewSponsorship(
+        chatId: string,
+        plan: SponsorshipPlan,
+        sponsor: User) {
+        await this.telegram.sendMessage(chatId,
+            MESSAGES.newSponsorship(plan, sponsor), { parse_mode: 'HTML' })
+    }
+
+    public async sendEnableTwoFactor(chatId: string) {
+        await this.telegram.sendMessage(chatId, MESSAGES.enableTwoFactor, {
             parse_mode: 'HTML'
-        }
-    )
+        })
+    }
+
+    public async sendVerifyChannel(chatId: string) {
+        await this.telegram.sendMessage(chatId, MESSAGES.verifyChannel, {
+            parse_mode: 'HTML'
+        })
     }
 
 
